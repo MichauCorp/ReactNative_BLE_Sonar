@@ -11,9 +11,8 @@ import {
 import * as ExpoDevice from "expo-device";
 import base64 from "react-native-base64";
 
-const AROMA_UUID = "19B10000-E8F2-537E-4F6C-D104768A1214";
-const AROMA_CHARACTERISTIC = "19B10001-E8F2-537E-4F6C-D104768A1214";
-const AROMA_STATE_CHARACTERISTIC = "19B10002-E8F2-537E-4F6C-D104768A1215";
+const SONAR_UUID = "19B10000-E8F2-537E-4F6C-D104768A1214";
+const SONAR_CHARACTERISTIC = "19B10001-E8F2-537E-4F6C-D104768A1214";
 
 
 interface BluetoothLowEnergyApi {
@@ -24,12 +23,14 @@ interface BluetoothLowEnergyApi {
   disconnectFromDevice: () => void;
   connectedDevice: Device | null;
   allDevices: Device[];
+  angle: number;
 }
 
 function useBLE(): BluetoothLowEnergyApi {
   const bleManager = useMemo(() => new BleManager(), []);
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
+  const [angle, setAngle] = useState(0); // State for rotation angle
 
   const requestAndroid31Permissions = async () => {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -129,8 +130,8 @@ function useBLE(): BluetoothLowEnergyApi {
     try {
       if (connectedDevice) {
         const characteristic = await connectedDevice.writeCharacteristicWithResponseForService(
-          AROMA_UUID,
-          AROMA_CHARACTERISTIC,
+          SONAR_UUID,
+          SONAR_CHARACTERISTIC,
           base64.encodeFromByteArray(value)
         );
         console.log("Write successful:", characteristic);
@@ -153,45 +154,20 @@ function useBLE(): BluetoothLowEnergyApi {
   
     if (!characteristic?.value) {
       console.log("No data received.");
-      return;
-    }
-  
-    const decodedValue = base64.decode(characteristic.value);
-    console.log("Received value:", decodedValue);
-  };
-  /*
-  const onHeartRateUpdate = (
-    error: BleError | null,
-    characteristic: Characteristic | null
-  ) => {
-    if (error) {
-      console.log(error);
-      return -1;
-    } else if (!characteristic?.value) {
-      console.log("No Data was recieved");
       return -1;
     }
+    
     const rawData = base64.decode(characteristic.value);
-    let innerHeartRate: number = -1;
-
-    const firstBitValue: number = Number(rawData) & 0x01;
-
-    if (firstBitValue === 0) {
-      innerHeartRate = rawData[1].charCodeAt(0);
-    } else {
-      innerHeartRate =
-        Number(rawData[1].charCodeAt(0) << 8) +
-        Number(rawData[2].charCodeAt(2));
-    }
-
-    setHeartRate(innerHeartRate);
+    const reverse = (180 - Number(rawData)) % 180;
+    console.log("Received value:", rawData);
+    setAngle(Number(reverse));
   };
-  */
+
   const startStreamingData = async (device: Device) => {
     if (device) {
       device.monitorCharacteristicForService(
-        AROMA_UUID,
-        AROMA_CHARACTERISTIC,
+        SONAR_UUID,
+        SONAR_CHARACTERISTIC,
         onUpdate
       );
     } else {
@@ -207,6 +183,7 @@ function useBLE(): BluetoothLowEnergyApi {
     allDevices,
     connectedDevice,
     disconnectFromDevice,
+    angle,
   };
 };
 
