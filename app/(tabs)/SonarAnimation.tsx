@@ -41,7 +41,7 @@ const SonarAnimation = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <SonarView degrees={angle} />
+      <SonarView degrees={angle}  distance={130}/>
       {/* Styled TouchableOpacity to toggle rotation */}
       <TouchableOpacity style={styles.button} onPress={toggleRotation}>
         <Text style={styles.buttonText}>

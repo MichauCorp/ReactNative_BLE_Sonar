@@ -24,6 +24,7 @@ interface BluetoothLowEnergyApi {
   connectedDevice: Device | null;
   allDevices: Device[];
   angle: number;
+  distance: number;
 }
 
 function useBLE(): BluetoothLowEnergyApi {
@@ -31,6 +32,7 @@ function useBLE(): BluetoothLowEnergyApi {
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [connectedDevice, setConnectedDevice] = useState<Device | null>(null);
   const [angle, setAngle] = useState(0); // State for rotation angle
+  const [distance, setDistance] = useState(0); // State for rotation angle
 
   const requestAndroid31Permissions = async () => {
     const bluetoothScanPermission = await PermissionsAndroid.request(
@@ -158,9 +160,18 @@ function useBLE(): BluetoothLowEnergyApi {
     }
     
     const rawData = base64.decode(characteristic.value);
-    const reverse = (180 - Number(rawData)) % 180;
+    //const reverse = (180 - Number(rawData)) % 180;
     console.log("Received value:", rawData);
-    setAngle(Number(reverse));
+    //setAngle(reverse);
+
+    
+    const rAngle = Number(rawData.split(',')[0]);
+    const rDistance = Number(rawData.split(',')[1]);
+    const reverse = (180 - Number(rAngle)) % 180;
+    console.log("Received value:", rawData);
+    setAngle(reverse);
+    setDistance(rDistance);
+    
   };
 
   const startStreamingData = async (device: Device) => {
@@ -184,6 +195,7 @@ function useBLE(): BluetoothLowEnergyApi {
     connectedDevice,
     disconnectFromDevice,
     angle,
+    distance,
   };
 };
 

@@ -1,56 +1,127 @@
-
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 
 interface SonarViewProps {
-  degrees: number; // Rotation angle of the thicker radius
+  degrees: number;
+  distance?: number;
 }
 
-const SonarView: React.FC<SonarViewProps> = ({ degrees }) => {
-  const circleRadius = 50; // Radius of the inner circle
-  const outerCircleDiameter = 200; // Diameter of the outer circle
-  const lineLength = outerCircleDiameter; // Length of each line (equal to outer circle diameter)
-  const thickerLineLength = outerCircleDiameter / 2; // Length of the thicker radius (half of the diameter)
+interface Dot {
+  id: number;
+  x: number;
+  y: number;
+  opacity: Animated.Value;
+  createdAt: number;
+}
 
-  // Create lines at 45 degree intervals
+const COOLDOWN_DURATION = 1000; // 1 second
+const FADE_DURATION = 3000; // 3 seconds
+const MAX_DISTANCE = 150; // Maximum distance
+
+const SonarView: React.FC<SonarViewProps> = ({ degrees, distance }) => {
+  const [dots, setDots] = useState<Dot[]>([]);
+  const dotIdRef = useRef(0);
+  const lastDotTimeRef = useRef(0);
+
+  const circleRadius = 50;
+  const outerCircleDiameter = 200;
+  const lineLength = outerCircleDiameter;
+  const thickerLineLength = outerCircleDiameter / 2;
+
   const lines = Array.from({ length: 8 }).map((_, index) => {
-    const angle = (index * 45); // Angle for each line
+    const angle = (index * 45);
     return {
       transform: [{ rotate: `${angle}deg` }],
     };
   });
 
+  const removeDot = useCallback((id: number) => {
+    setDots(prevDots => prevDots.filter(dot => dot.id !== id));
+  }, []);
+
+  useEffect(() => {
+    const now = Date.now();
+    if (distance !== undefined && distance >= 0 && distance < MAX_DISTANCE) {
+      if (now - lastDotTimeRef.current >= COOLDOWN_DURATION) {
+        // Map distance to dot position
+        const dotPosition = (distance / MAX_DISTANCE) * thickerLineLength;
+        const angleInRadians = ((degrees + 180) % 360 * Math.PI) / 180;
+        const x = dotPosition * Math.cos(angleInRadians);
+        const y = dotPosition * Math.sin(angleInRadians);
+
+        const newDot: Dot = {
+          id: dotIdRef.current,
+          x,
+          y,
+          opacity: new Animated.Value(1),
+          createdAt: Date.now(),
+        };
+
+        dotIdRef.current += 1;
+        lastDotTimeRef.current = now;
+
+        setDots(prevDots => [...prevDots, newDot]);
+
+        Animated.timing(newDot.opacity, {
+          toValue: 0,
+          duration: FADE_DURATION,
+          useNativeDriver: true,
+        }).start(() => removeDot(newDot.id));
+      }
+    }
+  }, [degrees, distance, removeDot]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setDots(prevDots => prevDots.filter(dot => now - dot.createdAt < FADE_DURATION));
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.container}>
-      {/* Outer circle */}
       <View style={[styles.circle, styles.outerCircle]} />
-      {/* Inner circle */}
       <View style={[styles.circle, styles.innerCircle]} />
-      {/* Render lines */}
       {lines.map((style, index) => (
         <View
           key={index}
           style={[
             styles.line,
             style,
-            { width: lineLength, height: 2 }, // Set width and height for lines
+            { width: lineLength, height: 2 },
           ]}
         />
       ))}
-      {/* Thicker radius */}
       <View
         style={[
           styles.thickerLine,
           {
             transform: [
-              { translateX: thickerLineLength / 2 }, // Move the line end to the center
-              { rotate: `${degrees}deg` }, // Rotate around the end
-              { translateX: -thickerLineLength / 2 }, // Move it back to its original position
+              { translateX: thickerLineLength / 2 },
+              { rotate: `${degrees}deg` },
+              { translateX: -thickerLineLength / 2 },
             ],
-            width: thickerLineLength, // Adjust width for thicker line
+            width: thickerLineLength,
           }
         ]}
       />
+      {dots.map(dot => (
+        <Animated.View
+          key={dot.id}
+          style={[
+            styles.dot,
+            {
+              transform: [
+                { translateX: dot.x },
+                { translateY: dot.y },
+              ],
+              opacity: dot.opacity,
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 };
@@ -59,12 +130,12 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     alignItems: 'center',
-    width: 200, // Width to ensure it fits the outer circle
-    height: 200, // Height to ensure it fits the outer circle
+    width: 200,
+    height: 200,
   },
   circle: {
     position: 'absolute',
-    borderRadius: 100, // Make it a circle
+    borderRadius: 100,
     borderWidth: 2,
     borderColor: 'green',
   },
@@ -83,17 +154,28 @@ const styles = StyleSheet.create({
     backgroundColor: 'green',
     top: '50%',
     left: '50%',
-    marginLeft: -100, // Center lines based on full diameter
-    marginTop: -1,  // Center lines based on height
+    marginLeft: -100,
+    marginTop: -1,
   },
   thickerLine: {
     position: 'absolute',
     backgroundColor: 'green',
     top: '50%',
     left: '50%',
-    marginTop: -2, // Center based on height
-    height: 4, // Thickness of the thicker line
+    marginTop: -2,
+    height: 4,
   },
+  dot: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#94F903',
+    top: '50%',
+    left: '50%',
+    marginTop: -5,
+    marginLeft: -5,
+  }
 });
 
 export default SonarView;

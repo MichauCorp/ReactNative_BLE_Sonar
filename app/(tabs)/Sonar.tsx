@@ -19,10 +19,12 @@ const Sonar = () => {
     connectedDevice,
     disconnectFromDevice,
     writeValueToDevice,
-    angle
+    angle,
+    distance
   } = useBLE();
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [rawDataToSend, setRawDataToSend] = useState<string>(''); // State for user input data
+  const [manual, setManual] = useState<boolean>(false);
 
   const handleWrite = () => {
     // Convert rawDataToSend to Uint8Array (if needed) and write to device
@@ -46,17 +48,73 @@ const Sonar = () => {
     setIsModalVisible(true);
   };
 
+  const manualControl = () => {
+    setManual(!manual);
+    setRawDataToSend("0");
+    handleWrite();
+  }
+
+  const turnLeft = () => {
+
+  }
+  const turnRight = () => {
+    
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {connectedDevice ? (
         <>
           <View style={styles.centerPlace}>
-            <SonarView degrees={angle}/>
+            <SonarView degrees={angle} distance={distance}/>
           </View>
+          {manual ? (
+            <>
+
+            </>
+          ) : (
+            <>
+              <View style = {styles.row}>
+                <TouchableOpacity
+                  onPress={turnLeft}
+                  style = {styles.ctaButton}
+                >
+                  <Text>
+                   {'<'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={turnRight}
+                  style = {styles.ctaButton}
+                >
+                  <Text>
+                   {'>'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          <TouchableOpacity
+            onPress={manualControl}
+            style={styles.ctaButton}
+          >
+            <Text style={styles.ctaButtonText}>
+              {manual ? "Automatic" : "manual"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={connectedDevice ? disconnectFromDevice : openModal}
+            style={styles.ctaButton}
+          >
+            <Text style={styles.ctaButtonText}>
+              {connectedDevice ? "Disconnect" : "Connect"}
+            </Text>
+          </TouchableOpacity>
         </>
       ) : (
         <>
-          <View style = {styles.spacing}></View>
+          <View style = {styles.largeSpacing}></View>
           <TouchableOpacity
             onPress={connectedDevice ? disconnectFromDevice : openModal}
             style={styles.ctaButton}
@@ -83,8 +141,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  spacing: {
+  largeSpacing: {
     height: 675
+  },
+  mediumSpacing: {
+    height: 200
   },
   container: {
     flex: 1,
@@ -103,6 +164,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: "white",
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    padding: 10,
   },
 });
 
